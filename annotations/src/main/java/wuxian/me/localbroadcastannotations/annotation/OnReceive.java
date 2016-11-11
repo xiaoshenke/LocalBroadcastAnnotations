@@ -21,7 +21,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.METHOD)
 public @interface OnReceive {
-    String action() default "None";
+    String value() default "None";
 
     String category() default "None";
 }

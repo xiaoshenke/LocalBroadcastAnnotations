@@ -25,7 +25,7 @@ public class AnnotatedMethod {
         this.action = getActionFrom(annotation);
         this.category = getCategoryFrom(annotation);
 
-        if (this.action.equals("None")) {  //action 不能为空
+        if (this.action.equals("None")) {  //value 不能为空
             throw new IllegalArgumentException(String.format(
                     "No sensor type specified in @%s for method %s."
                             + " Set a sensor type such as Sensor.TYPE_ACCELEROMETER.",
@@ -51,6 +51,6 @@ public class AnnotatedMethod {
     }
 
     private String getActionFrom(@NonNull Annotation annotation) {
-        return ((OnReceive) annotation).action();
+        return ((OnReceive) annotation).value();
     }
 }

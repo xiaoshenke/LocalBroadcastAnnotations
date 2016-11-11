@@ -3,6 +3,7 @@ package wuxian.me.localbroadcastannotations.compiler;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,7 +25,7 @@ import javax.tools.Diagnostic;
 
 import wuxian.me.localbroadcastannotations.annotation.OnReceive;
 
-public class LocalBroadcastAnnotationsProcessor  extends AbstractProcessor {
+public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
     @NonNull
     private Elements elementUtils;
     @NonNull
@@ -54,7 +55,15 @@ public class LocalBroadcastAnnotationsProcessor  extends AbstractProcessor {
             error(e.getElement(), e.getMessage());
         }
 
-        //TODO: generate help java class file
+        try {
+            warn(null, "Preparing to create %d generated classes.", mGroupedMethodsMap.size());
+            AnnotationsFileBuilder.generateFile(mGroupedMethodsMap, elementUtils, filer);
+            mGroupedMethodsMap.clear();
+        } catch (IOException e) {
+            error(null, e.getMessage());
+        } catch (ProcessingException e) {
+            error(e.getElement(), e.getMessage());
+        }
 
         return true;
     }

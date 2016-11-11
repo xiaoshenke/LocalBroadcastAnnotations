@@ -16,6 +16,9 @@ public class AnnotatedMethodsPerClass {
     @NonNull
     private String className;
 
+    public String getEnclosingClassName() {
+        return className;
+    }
 
     public AnnotatedMethodsPerClass(@NonNull String className) {
         this.className = className;
