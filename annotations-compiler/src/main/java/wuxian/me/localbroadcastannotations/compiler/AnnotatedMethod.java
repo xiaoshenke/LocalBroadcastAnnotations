@@ -14,6 +14,7 @@ import wuxian.me.localbroadcastannotations.annotation.OnReceive;
 
 public class AnnotatedMethod {
 
+    public static final String NONE = "None";
     private ExecutableElement element;
     private String action;
     private String category;
@@ -25,7 +26,7 @@ public class AnnotatedMethod {
         this.action = getActionFrom(annotation);
         this.category = getCategoryFrom(annotation);
 
-        if (this.action.equals("None")) {  //value 不能为空
+        if (this.action.equals(NONE)) {  //value 不能为空
             throw new IllegalArgumentException(String.format(
                     "No sensor type specified in @%s for method %s."
                             + " Set a sensor type such as Sensor.TYPE_ACCELEROMETER.",

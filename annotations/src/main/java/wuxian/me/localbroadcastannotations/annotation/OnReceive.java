@@ -20,6 +20,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.METHOD)
+@ListenerMethod(parameters = {"android.content.Context", "android.content.Intent"})
 public @interface OnReceive {
     String value() default "None";
 
