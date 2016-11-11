@@ -187,8 +187,7 @@ public class AnnotationsFileBuilder {
             checkAnnotatedMethod(method.getExecutableElement(), OnReceive.class);
         }
 
-        //Never will be FIXME: 忽然发现我现在必须要拿出intent里的action和categary。而这是runtime的。就是说我现在的做法是没办法实现的。
-        //傻逼了。不过至少练习了一下annotation
+        //TODO 开大招 这里使用runtime获取annotation的方式 不过目测效率会差一些 尤其是当localbroadcast的频率很高的时候
 
         return null;
     }
