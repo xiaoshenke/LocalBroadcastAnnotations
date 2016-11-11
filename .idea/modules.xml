@@ -2,9 +2,12 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/LocalBroadcastAnnotationsDemo.iml" filepath="$PROJECT_DIR$/LocalBroadcastAnnotationsDemo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/LocalBroadcastAnnotations.iml" filepath="$PROJECT_DIR$/LocalBroadcastAnnotations.iml" />
+      <module fileurl="file://$PROJECT_DIR$/annotations/annotations.iml" filepath="$PROJECT_DIR$/annotations/annotations.iml" />
+      <module fileurl="file://$PROJECT_DIR$/annotations-compiler/annotations-compiler.iml" filepath="$PROJECT_DIR$/annotations-compiler/annotations-compiler.iml" />
+      <module fileurl="file://$PROJECT_DIR$/annotations-lib/annotations-lib.iml" filepath="$PROJECT_DIR$/annotations-lib/annotations-lib.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/library/library.iml" filepath="$PROJECT_DIR$/library/library.iml" />
+      <module fileurl="file://$PROJECT_DIR$/localbroadcastannotations-compiler/localbroadcastannotations-compiler.iml" filepath="$PROJECT_DIR$/localbroadcastannotations-compiler/localbroadcastannotations-compiler.iml" />
     </modules>
   </component>
 </project>
