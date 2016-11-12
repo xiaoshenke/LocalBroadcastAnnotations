@@ -14,6 +14,9 @@ import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.annotation.processing.SupportedSourceVersion;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -25,6 +28,11 @@ import javax.tools.Diagnostic;
 
 import wuxian.me.localbroadcastannotations.annotation.OnReceive;
 
+/**
+ * AbstractProcessor debug article: http://www.jianshu.com/p/80a14bc35000
+ */
+@SupportedAnnotationTypes(value = "*")
+@SupportedSourceVersion(value = SourceVersion.RELEASE_7)
 public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
     @NonNull
     private Elements elementUtils;
@@ -43,12 +51,14 @@ public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
         messager = processingEnv.getMessager();
         filer = processingEnv.getFiler();
         elementUtils = processingEnv.getElementUtils();
+        error(null,"in init");
     }
 
 
     @Override
     public boolean process(@NonNull Set<? extends TypeElement> set,
                            @NonNull RoundEnvironment roundEnv) {
+        error(null,"begin process");
         try {
             processAnnotation(OnReceive.class, roundEnv);
         } catch (ProcessingException e) {
