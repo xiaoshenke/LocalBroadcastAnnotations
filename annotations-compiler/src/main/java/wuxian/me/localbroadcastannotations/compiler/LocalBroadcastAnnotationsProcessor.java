@@ -31,8 +31,8 @@ import wuxian.me.localbroadcastannotations.annotation.OnReceive;
 /**
  * AbstractProcessor debug article: http://www.jianshu.com/p/80a14bc35000
  */
-@SupportedAnnotationTypes(value = "*")
-@SupportedSourceVersion(value = SourceVersion.RELEASE_7)
+@SupportedAnnotationTypes(value = "wuxian.me.localbroadcastannotations.annotation.OnReceive")
+//@SupportedSourceVersion(value = SourceVersion.RELEASE_7)
 public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
     @NonNull
     private Elements elementUtils;
@@ -51,28 +51,28 @@ public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
         messager = processingEnv.getMessager();
         filer = processingEnv.getFiler();
         elementUtils = processingEnv.getElementUtils();
-        error(null,"in init");
+        info(messager, null, "init annotation processor");
     }
 
 
     @Override
     public boolean process(@NonNull Set<? extends TypeElement> set,
                            @NonNull RoundEnvironment roundEnv) {
-        error(null,"begin process");
+        info(messager, null, "begin to process annotations");
         try {
             processAnnotation(OnReceive.class, roundEnv);
         } catch (ProcessingException e) {
-            error(e.getElement(), e.getMessage());
+            error(messager, e.getElement(), e.getMessage());
         }
 
         try {
-            warn(null, "Preparing to create %d generated classes.", mGroupedMethodsMap.size());
-            AnnotationsFileBuilder.generateFile(mGroupedMethodsMap, elementUtils, filer);
+            warn(messager, null, "Preparing to create %d generated classes.", mGroupedMethodsMap.size());
+            AnnotationsFileBuilder.generateFile(messager, mGroupedMethodsMap, elementUtils, filer);
             mGroupedMethodsMap.clear();
         } catch (IOException e) {
-            error(null, e.getMessage());
+            error(messager, null, e.getMessage());
         } catch (ProcessingException e) {
-            error(e.getElement(), e.getMessage());
+            error(messager, e.getElement(), e.getMessage());
         }
 
         return true;
@@ -87,7 +87,7 @@ public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
      */
     private void processAnnotation(Class<? extends Annotation> annotationClass, @NonNull RoundEnvironment roundEnv) throws ProcessingException {
         Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(annotationClass);
-        warn(null, "Processing %d elements annotated with @%s", elements.size(), elements);
+        warn(messager, null, "Processing %d elements annotated with @%s", elements.size(), elements);
 
         for (Element element : elements) {
             if (element.getKind() != ElementKind.METHOD) {
@@ -169,11 +169,15 @@ public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
     }
 
 
-    private void error(@Nullable Element e, @NonNull String msg, @Nullable Object... args) {
+    public static void error(@NonNull Messager messager, @Nullable Element e, @NonNull String msg, @Nullable Object... args) {
         messager.printMessage(Diagnostic.Kind.ERROR, String.format(msg, args), e);
     }
 
-    private void warn(@Nullable Element e, @NonNull String msg, @Nullable Object... args) {
+    public static void warn(@NonNull Messager messager, @Nullable Element e, @NonNull String msg, @Nullable Object... args) {
         messager.printMessage(Diagnostic.Kind.WARNING, String.format(msg, args), e);
+    }
+
+    public static void info(@NonNull Messager messager, @Nullable Element e, @NonNull String msg, @Nullable Object... args) {
+        messager.printMessage(Diagnostic.Kind.NOTE, String.format(msg, args), e);
     }
 }

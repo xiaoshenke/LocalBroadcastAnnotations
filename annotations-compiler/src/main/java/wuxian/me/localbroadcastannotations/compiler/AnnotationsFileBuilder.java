@@ -18,8 +18,10 @@ import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
@@ -36,8 +38,10 @@ import wuxian.me.localbroadcastannotations.annotation.OnReceive;
  * Created by wuxian on 11/11/2016.
  * <p>
  * 生成annotation binder class
- *
+ * <p>
  * javapoet reference:https://github.com/square/javapoet
+ * <p>
+ * TODO: debug generatefile method
  */
 
 public class AnnotationsFileBuilder {
@@ -85,9 +89,21 @@ public class AnnotationsFileBuilder {
                     .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
                     .build();
 
-    public static void generateFile(@NonNull Map<String, AnnotatedMethodsPerClass> groupedMethodsMap,
+    private static Messager sMessager;
+
+    private AnnotationsFileBuilder() {
+        throw new NoSuchElementException();
+    }
+
+    /**
+     * generate java file for every class which has method be annotated with @OnReceive annotation
+     *
+     * @param messager used to debug:print message to shell
+     */
+    public static void generateFile(@NonNull Messager messager, @NonNull Map<String, AnnotatedMethodsPerClass> groupedMethodsMap,
                                     @NonNull Elements elementUtils, @NonNull Filer filer) throws IOException, ProcessingException {
 
+        sMessager = messager;
         for (AnnotatedMethodsPerClass groupedMethods : groupedMethodsMap.values()) {
 
             //检查被AnnotationMethod注解的函数是否符合约定。
@@ -130,7 +146,7 @@ public class AnnotationsFileBuilder {
             Writer writer = jfo.openWriter();
             JavaFile.builder(packageElement.toString(), binderClass)
                     .addFileComment("This class is generated code from LocalBroadcastAnnotation Lib. Do not modify!")
-                    //.addStaticImport(CONTEXT, "SENSOR_SERVICE") //TODO
+                    //.addStaticImport(CONTEXT, "SENSOR_SERVICE")
                     .build()
                     .writeTo(writer);
             writer.close();
