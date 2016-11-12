@@ -18,9 +18,9 @@ import java.lang.annotation.Target;
  * void loadChineaseBooks(List<People> peoples){...}
  */
 
-@Retention(RetentionPolicy.CLASS)
+@Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-@ListenerMethod(parameters = {"android.content.Context", "android.content.Intent"})
+//@ListenerMethod(parameters = {"android.content.Context", "android.content.Intent"})
 public @interface OnReceive {
     String value() default "None";
 
