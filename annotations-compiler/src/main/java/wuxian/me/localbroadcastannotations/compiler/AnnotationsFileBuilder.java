@@ -67,6 +67,9 @@ public class AnnotationsFileBuilder {
 
     public static void generateFile(@NonNull Map<String, AnnotatedMethodsPerClass> groupedMethodsMap,
                                     @NonNull Elements elementUtils, @NonNull Filer filer) throws IOException, ProcessingException {
+        if (true) {
+            return;
+        }
         for (AnnotatedMethodsPerClass groupedMethods : groupedMethodsMap.values()) {
 
             TypeElement classTypeElement = elementUtils.getTypeElement(groupedMethods.getEnclosingClassName());
@@ -127,6 +130,7 @@ public class AnnotationsFileBuilder {
             }
             constructorBuilder.addStatement("this.$N.addCategory($L)", FIELD_FILTER, method.getCategory());
         }
+
         return constructorBuilder.build();
     }
 
@@ -186,9 +190,19 @@ public class AnnotationsFileBuilder {
         for (AnnotatedMethod method : methodsPerClass.getAnnotatedMethods().values()) {
             checkAnnotatedMethod(method.getExecutableElement(), OnReceive.class);
         }
-
-        //TODO 开大招 这里使用runtime获取annotation的方式 不过目测效率会差一些 尤其是当localbroadcast的频率很高的时候
-
+        //TODO:
+        /*
+        BroadcastReceiver receiver = new BroadcastReceiver(){
+            public void onReceive(Context context,Intent intent){
+                String action = intent.getAction();
+                Set<String> categories = intent.getCategories();
+                String category = AnnotatedMethod.NONE;
+                if(categories != null && categories.size()!=0){
+                    category =  categories.iterator().next();  //拿到第一个category
+                }
+            }
+        }
+        */
         return null;
     }
 
