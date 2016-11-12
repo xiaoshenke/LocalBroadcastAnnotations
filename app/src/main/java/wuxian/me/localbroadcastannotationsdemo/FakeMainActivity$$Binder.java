@@ -10,10 +10,8 @@ import android.util.Log;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 import wuxian.me.localbroadcastannotations.RecevierBinder;
@@ -27,23 +25,16 @@ import wuxian.me.localbroadcastannotations.compiler.AnnotatedMethodsPerClass;
  * fake binder,implement by runtime reflection.
  */
 
-public class MainActivity$$Binder implements RecevierBinder<MainActivity> {
+public class FakeMainActivity$$Binder implements RecevierBinder<MainActivity> {
 
     private Context context;
     private Map<Integer, Method> methodMap = new HashMap<>();
 
-    public MainActivity$$Binder(Context context, MainActivity target) {
+    public FakeMainActivity$$Binder(Context context, MainActivity target) {
         this.context = context;
         Class<?> clazz = target.getClass();
 
         for (Method method : clazz.getDeclaredMethods()) {
-            Annotation[] annotations = method.getDeclaredAnnotations();
-            Log.e("Binder", "methed " + method.toString());
-            if (annotations != null) {
-                for (int i = 0; i < annotations.length; i++) {
-                    Log.e("Binder", annotations[i].toString());
-                }
-            }
             OnReceive onReceive = method.getAnnotation(OnReceive.class);
             if (onReceive == null) {
                 continue;

@@ -36,19 +36,34 @@ import wuxian.me.localbroadcastannotations.annotation.OnReceive;
  * Created by wuxian on 11/11/2016.
  * <p>
  * 生成annotation binder class
+ *
+ * javapoet reference:https://github.com/square/javapoet
  */
 
 public class AnnotationsFileBuilder {
     private static final String SUFFIX = "$$ReceiverBinder";
 
-    private static final ClassName BROADCAST_RECEIVER =
-            ClassName.get("android.content", "BroadcastReceiver");
-    private static final ClassName INTENT_FILTER =
-            ClassName.get("android.content", "IntentFilter");
+    private static final ClassName ANNOTATEDMETHODS_PERCLASS
+            = ClassName.get("wuxian.me.localbroadcastannotations.compiler", "AnnotatedMethodsPerClass");
+    private static final ClassName ON_RECEIVE
+            = ClassName.get("wuxian.me.localbroadcastannotations.annotation", "OnReceive");
+    private static final ClassName ANNOTATED_METHOD
+            = ClassName.get("wuxian.me.localbroadcastannotations.compiler", "AnnotatedMethod");
+    private static final ClassName RECEIVER_BINDER
+            = ClassName.get("wuxian.me.localbroadcastannotations", "RecevierBind");
 
+
+    private static final ClassName METHOD = ClassName.get("java.lang.reflect", "Method");
+    private static final ClassName CLASS = ClassName.get("java.lang", "Class");
+
+    private static final ClassName SET = ClassName.get("java.util", "Set");
+    private static final ClassName MAP = ClassName.get("java.util", "Map");
+
+    private static final ClassName INTENT = ClassName.get("android.content", "Intent");
     private static final ClassName CONTEXT = ClassName.get("android.content", "Context");
+    private static final ClassName BROADCAST_RECEIVER = ClassName.get("android.content", "BroadcastReceiver");
+    private static final ClassName INTENT_FILTER = ClassName.get("android.content", "IntentFilter");
 
-    private static final ClassName RECEIVER_BINDER = ClassName.get("wuxian.me.localbroadcastannotations", "RecevierBind");
 
     private static final FieldSpec FIELD_CONTEXT =
             FieldSpec.builder(CONTEXT, "context")
@@ -65,12 +80,21 @@ public class AnnotationsFileBuilder {
                     .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
                     .build();
 
+    private static final FieldSpec FIELD_METHOD_MAP =
+            FieldSpec.builder(MAP, "methodMap")
+                    .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
+                    .build();
+
     public static void generateFile(@NonNull Map<String, AnnotatedMethodsPerClass> groupedMethodsMap,
                                     @NonNull Elements elementUtils, @NonNull Filer filer) throws IOException, ProcessingException {
-        if (true) {
-            return;
-        }
+
         for (AnnotatedMethodsPerClass groupedMethods : groupedMethodsMap.values()) {
+
+            //检查被AnnotationMethod注解的函数是否符合约定。
+            //比如 @OnReceive(String1,String2) public void onTextBlue(Context,Intent,int)就是不合规定的一个被注解函数
+            for (AnnotatedMethod method : groupedMethods.getAnnotatedMethods().values()) {
+                checkAnnotatedMethod(method.getExecutableElement(), OnReceive.class);
+            }
 
             TypeElement classTypeElement = elementUtils.getTypeElement(groupedMethods.getEnclosingClassName());
 
@@ -94,6 +118,7 @@ public class AnnotationsFileBuilder {
                             .addField(FIELD_RECEIVER)
                             .addField(FIELD_FILTER)
                             .addField(FIELD_CONTEXT)
+                            .addField(FIELD_METHOD_MAP)
                             .addMethod(constructor)
                             .addMethod(bindMethod)
                             .build();
@@ -116,6 +141,8 @@ public class AnnotationsFileBuilder {
                                                          @NonNull Map<Integer, AnnotatedMethod> itemsMap) throws ProcessingException {
 
         ParameterSpec contextParameter = ParameterSpec.builder(CONTEXT, "context").build();
+
+        //add code: this.context = context; this.filter = new IntentFilter();
         MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(contextParameter)
@@ -123,6 +150,8 @@ public class AnnotationsFileBuilder {
                 .addStatement("this.$N = context", FIELD_CONTEXT)
                 .addStatement("this.$N = new IntentFilter()", FIELD_FILTER);
 
+
+        //add code: this.filter.addAction(); this.filter.addCategory();
         for (AnnotatedMethod method : itemsMap.values()) {
             constructorBuilder.addStatement("this.$N.addAction($L)", FIELD_FILTER, method.getAction());
             if (method.getCategory().equals(AnnotatedMethod.NONE)) {
@@ -130,6 +159,16 @@ public class AnnotationsFileBuilder {
             }
             constructorBuilder.addStatement("this.$N.addCategory($L)", FIELD_FILTER, method.getCategory());
         }
+
+        //add code: Class<?> clazz = target.getClass() ....
+        constructorBuilder.addStatement("$T<?> clazz = target.getClass()", CLASS);
+        constructorBuilder.beginControlFlow("for ($T method : clazz.getDeclaredMethods())", METHOD)
+                .addStatement("$L onReceive = method.getAnnotation($L.class);", ON_RECEIVE, ON_RECEIVE)
+                .beginControlFlow("if (onReceive == null)").addStatement("continue").endControlFlow()
+                .addStatement("int id = $L.generateId(onReceive.value(), onReceive.category());", ANNOTATEDMETHODS_PERCLASS)
+                .beginControlFlow("if (methodMap.containsKey(id))").addStatement("continue").endControlFlow()
+                .addStatement("methodMap.put(id, method)")
+                .endControlFlow();
 
         return constructorBuilder.build();
     }
@@ -145,7 +184,7 @@ public class AnnotationsFileBuilder {
         MethodSpec.Builder builder = getBaseMethodBuilder("bind")
                 .addParameter(targetParameter)
                 .addCode(createReceiverBlock(methodsPerClass))
-                .addStatement("LocalBroadcastManager.getInstance($N).registerReceiver($N,$N)", FIELD_CONTEXT, FIELD_RECEIVER, FIELD_FILTER);
+                .addStatement("LocalBroadcastManager.getInstance(this.$N).registerReceiver(this.$N,this.$N)", FIELD_CONTEXT, FIELD_RECEIVER, FIELD_FILTER);
 
         return builder.build();
     }
@@ -181,29 +220,46 @@ public class AnnotationsFileBuilder {
 
     }
 
+    @NonNull
+    private static MethodSpec createOnReceiveListenerMethod(@NonNull AnnotatedMethodsPerClass methodsPerClass) throws ProcessingException {
+
+        MethodSpec.Builder builder = getBaseMethodBuilder("onReceive").addParameter(CONTEXT, "context")
+                .addParameter(INTENT, "intent")
+                .addStatement("String action = intent.getAction()")
+                .addStatement("$T<String> categories = intent.getCategories()", SET)
+                .addStatement("String category = $T.NONE", ANNOTATED_METHOD)
+                .beginControlFlow("if (categories != null && categories.size() != 0)")
+                .addStatement("category = categories.iterator().next()")
+                .endControlFlow()
+                .addStatement("int id = $T.generateId(action, category)", ANNOTATEDMETHODS_PERCLASS)
+                .beginControlFlow("if (methodMap.containsKey(id))")
+                .beginControlFlow("try")
+                .addStatement("methodMap.get(id).invoke(target, new Object[]{context, intent})")
+                .nextControlFlow("catch (IllegalAccessException e)")
+                .addStatement("e.printStackTrace()")
+                .nextControlFlow("catch (InvocationTargetException e)")
+                .addStatement("e.printStackTrace()")
+                .endControlFlow()
+                .endControlFlow();
+
+        return builder.build();
+    }
+
     /**
      * create receiver block
      */
     private static CodeBlock createReceiverBlock(@NonNull AnnotatedMethodsPerClass methodsPerClass) throws ProcessingException {
 
-        //first check all annotated method
-        for (AnnotatedMethod method : methodsPerClass.getAnnotatedMethods().values()) {
-            checkAnnotatedMethod(method.getExecutableElement(), OnReceive.class);
-        }
-        //TODO:
-        /*
-        BroadcastReceiver receiver = new BroadcastReceiver(){
-            public void onReceive(Context context,Intent intent){
-                String action = intent.getAction();
-                Set<String> categories = intent.getCategories();
-                String category = AnnotatedMethod.NONE;
-                if(categories != null && categories.size()!=0){
-                    category =  categories.iterator().next();  //拿到第一个category
-                }
-            }
-        }
-        */
-        return null;
+        CodeBlock receiverBlock = CodeBlock.builder()
+                .add("new $T() {\n", BROADCAST_RECEIVER)
+                .indent()
+                .add(createOnReceiveListenerMethod(methodsPerClass).toString())
+                .unindent()
+                .add("}")
+                .build();
+        return CodeBlock.builder()
+                .addStatement("this.$N = $L", FIELD_FILTER, receiverBlock)
+                .build();
     }
 
     /**

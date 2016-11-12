@@ -2,7 +2,6 @@ package wuxian.me.localbroadcastannotationsdemo;
 
 import android.content.Context;
 import android.content.Intent;
-import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -57,10 +56,10 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
 
         if (binder == null) {
-            binder = new MainActivity$$Binder(this, this);
+            binder = new FakeMainActivity$$Binder(this, this);
         }
-        binder.bind(this);
-        //LocalBroadcastAnnotations.bind(this);
+        //binder.bind(this);
+        LocalBroadcastAnnotations.bind(this);
     }
 
     @Override
@@ -70,6 +69,6 @@ public class MainActivity extends AppCompatActivity {
         if (binder != null) {
             binder.unbind();
         }
-        //LocalBroadcastAnnotations.unbind(this);
+        LocalBroadcastAnnotations.unbind(this);
     }
 }
