@@ -12,7 +12,6 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.units.qual.C;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -42,7 +41,6 @@ import wuxian.me.localbroadcastannotations.annotation.OnReceive;
  * <p>
  * javapoet reference:https://github.com/square/javapoet
  * <p>
- * TODO: debug generatefile method
  */
 
 public class AnnotationsFileBuilder {
@@ -115,8 +113,6 @@ public class AnnotationsFileBuilder {
 
         sMessager = messager;
         for (AnnotatedMethodsPerClass groupedMethods : groupedMethodsMap.values()) {
-
-            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "begin check methods");
             //检查被AnnotationMethod注解的函数是否符合约定。
             //比如 @OnReceive(String1,String2) public void onTextBlue(Context,Intent,int)就是不合规定的一个被注解函数
             for (AnnotatedMethod method : groupedMethods.getAnnotatedMethods().values()) {
@@ -135,16 +131,12 @@ public class AnnotationsFileBuilder {
                             .addModifiers(Modifier.FINAL)
                             .build();
 
-            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "begin create constructor");
             MethodSpec constructor = createConstructor(targetParameter, groupedMethods.getAnnotatedMethods());
-
-            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "begin create bind");
             MethodSpec bindMethod = createBindMethod(targetParameter, groupedMethods);
 
-            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "begin create class");
             TypeSpec binderClass =
                     TypeSpec.classBuilder(classTypeElement.getSimpleName() + SUFFIX)
-                            .addModifiers(Modifier.FINAL)
+                            .addModifiers(Modifier.FINAL, Modifier.PUBLIC)
                             .addSuperinterface(parameterizedInterface)
                             .addField(FIELD_RECEIVER)
                             .addField(FIELD_FILTER)
@@ -155,9 +147,6 @@ public class AnnotationsFileBuilder {
                             .addMethod(UNBIND_METHOD)
                             .build();
 
-
-            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "classtypeElement is %s ", classTypeElement.getQualifiedName().toString());
-            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "begin write java file");
             // Output our generated file with the same package as the target class.
             PackageElement packageElement = elementUtils.getPackageOf(classTypeElement);
             JavaFileObject jfo =
@@ -169,7 +158,6 @@ public class AnnotationsFileBuilder {
                     .build()
                     .writeTo(writer);
             writer.close();
-            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "after write java file");
         }
     }
 
