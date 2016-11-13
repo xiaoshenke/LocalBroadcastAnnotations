@@ -81,6 +81,7 @@ public class FakeMainActivity$$Binder implements RecevierBinder<MainActivity> {
 
     @Override
     public void unbind() {
+        LocalBroadcastManager.getInstance(context).unregisterReceiver(null);
 
     }
 }

@@ -12,6 +12,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.units.qual.C;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -54,15 +55,19 @@ public class AnnotationsFileBuilder {
     private static final ClassName ANNOTATED_METHOD
             = ClassName.get("wuxian.me.localbroadcastannotations.compiler", "AnnotatedMethod");
     private static final ClassName RECEIVER_BINDER
-            = ClassName.get("wuxian.me.localbroadcastannotations", "RecevierBind");
+            = ClassName.get("wuxian.me.localbroadcastannotations", "RecevierBinder");
 
+    private static final ClassName INVOCATION_TARGET_EXCEPTION = ClassName.get("java.lang.reflect", "InvocationTargetException");
 
     private static final ClassName METHOD = ClassName.get("java.lang.reflect", "Method");
     private static final ClassName CLASS = ClassName.get("java.lang", "Class");
 
+    private static final ClassName INTEGER = ClassName.get("java.lang", "Integer");
     private static final ClassName SET = ClassName.get("java.util", "Set");
     private static final ClassName MAP = ClassName.get("java.util", "Map");
+    private static final ClassName HASHMAP = ClassName.get("java.util", "HashMap");
 
+    private static final ClassName LOCAL_BROADCAST_MANAGER = ClassName.get("android.support.v4.content", "LocalBroadcastManager");
     private static final ClassName INTENT = ClassName.get("android.content", "Intent");
     private static final ClassName CONTEXT = ClassName.get("android.content", "Context");
     private static final ClassName BROADCAST_RECEIVER = ClassName.get("android.content", "BroadcastReceiver");
@@ -76,7 +81,7 @@ public class AnnotationsFileBuilder {
 
     private static final FieldSpec FIELD_RECEIVER =
             FieldSpec.builder(BROADCAST_RECEIVER, "receiver")
-                    .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
+                    .addModifiers(Modifier.PRIVATE)
                     .build();
 
     private static final FieldSpec FIELD_FILTER =
@@ -85,9 +90,14 @@ public class AnnotationsFileBuilder {
                     .build();
 
     private static final FieldSpec FIELD_METHOD_MAP =
-            FieldSpec.builder(MAP, "methodMap")
+            FieldSpec.builder(ParameterizedTypeName.get(MAP, INTEGER, METHOD), "methodMap")
                     .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
                     .build();
+
+    private static final MethodSpec UNBIND_METHOD = getBaseMethodBuilder("unbind")
+            .addStatement("$T.getInstance(this.$N).unregisterReceiver(this.$N)", LOCAL_BROADCAST_MANAGER, FIELD_CONTEXT, FIELD_RECEIVER)
+            .build();
+
 
     private static Messager sMessager;
 
@@ -106,6 +116,7 @@ public class AnnotationsFileBuilder {
         sMessager = messager;
         for (AnnotatedMethodsPerClass groupedMethods : groupedMethodsMap.values()) {
 
+            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "begin check methods");
             //检查被AnnotationMethod注解的函数是否符合约定。
             //比如 @OnReceive(String1,String2) public void onTextBlue(Context,Intent,int)就是不合规定的一个被注解函数
             for (AnnotatedMethod method : groupedMethods.getAnnotatedMethods().values()) {
@@ -124,9 +135,13 @@ public class AnnotationsFileBuilder {
                             .addModifiers(Modifier.FINAL)
                             .build();
 
+            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "begin create constructor");
             MethodSpec constructor = createConstructor(targetParameter, groupedMethods.getAnnotatedMethods());
+
+            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "begin create bind");
             MethodSpec bindMethod = createBindMethod(targetParameter, groupedMethods);
 
+            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "begin create class");
             TypeSpec binderClass =
                     TypeSpec.classBuilder(classTypeElement.getSimpleName() + SUFFIX)
                             .addModifiers(Modifier.FINAL)
@@ -137,8 +152,12 @@ public class AnnotationsFileBuilder {
                             .addField(FIELD_METHOD_MAP)
                             .addMethod(constructor)
                             .addMethod(bindMethod)
+                            .addMethod(UNBIND_METHOD)
                             .build();
 
+
+            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "classtypeElement is %s ", classTypeElement.getQualifiedName().toString());
+            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "begin write java file");
             // Output our generated file with the same package as the target class.
             PackageElement packageElement = elementUtils.getPackageOf(classTypeElement);
             JavaFileObject jfo =
@@ -146,10 +165,11 @@ public class AnnotationsFileBuilder {
             Writer writer = jfo.openWriter();
             JavaFile.builder(packageElement.toString(), binderClass)
                     .addFileComment("This class is generated code from LocalBroadcastAnnotation Lib. Do not modify!")
-                    //.addStaticImport(CONTEXT, "SENSOR_SERVICE")
+                    .addStaticImport(ClassName.get(classTypeElement), "*")
                     .build()
                     .writeTo(writer);
             writer.close();
+            LocalBroadcastAnnotationsProcessor.info(sMessager, null, "after write java file");
         }
     }
 
@@ -164,7 +184,8 @@ public class AnnotationsFileBuilder {
                 .addParameter(contextParameter)
                 .addParameter(targetParameter)
                 .addStatement("this.$N = context", FIELD_CONTEXT)
-                .addStatement("this.$N = new IntentFilter()", FIELD_FILTER);
+                .addStatement("this.$N = new IntentFilter()", FIELD_FILTER)
+                .addStatement("this.methodMap = new $T<>()", HASHMAP);
 
 
         //add code: this.filter.addAction(); this.filter.addCategory();
@@ -182,8 +203,8 @@ public class AnnotationsFileBuilder {
                 .addStatement("$L onReceive = method.getAnnotation($L.class);", ON_RECEIVE, ON_RECEIVE)
                 .beginControlFlow("if (onReceive == null)").addStatement("continue").endControlFlow()
                 .addStatement("int id = $L.generateId(onReceive.value(), onReceive.category());", ANNOTATEDMETHODS_PERCLASS)
-                .beginControlFlow("if (methodMap.containsKey(id))").addStatement("continue").endControlFlow()
-                .addStatement("methodMap.put(id, method)")
+                .beginControlFlow("if (this.$N.containsKey(id))", FIELD_METHOD_MAP).addStatement("continue").endControlFlow()
+                .addStatement("this.$N.put(id, method)", FIELD_METHOD_MAP)
                 .endControlFlow();
 
         return constructorBuilder.build();
@@ -200,7 +221,7 @@ public class AnnotationsFileBuilder {
         MethodSpec.Builder builder = getBaseMethodBuilder("bind")
                 .addParameter(targetParameter)
                 .addCode(createReceiverBlock(methodsPerClass))
-                .addStatement("LocalBroadcastManager.getInstance(this.$N).registerReceiver(this.$N,this.$N)", FIELD_CONTEXT, FIELD_RECEIVER, FIELD_FILTER);
+                .addStatement("$T.getInstance(this.$N).registerReceiver(this.$N,this.$N)", LOCAL_BROADCAST_MANAGER, FIELD_CONTEXT, FIELD_RECEIVER, FIELD_FILTER);
 
         return builder.build();
     }
@@ -218,6 +239,8 @@ public class AnnotationsFileBuilder {
             String error = String.format("@%s methods can only have %s parameter(s). (%s.%s)",
                     annotation.getSimpleName(), method.parameters().length,
                     element.getEnclosingElement().getSimpleName(), element.getSimpleName());
+
+            LocalBroadcastAnnotationsProcessor.error(sMessager, null, "check length fail");
             throw new ProcessingException(element, error);
         }
 
@@ -230,6 +253,8 @@ public class AnnotationsFileBuilder {
                         "Method parameters are not valid for @%s annotated method. Expected parameters of type(s): %s. (%s.%s)",
                         annotation.getSimpleName(), Joiner.on(", ").join(expectedParameters),
                         element.getEnclosingElement().getSimpleName(), element.getSimpleName());
+
+                LocalBroadcastAnnotationsProcessor.error(sMessager, null, "check parameter fail");
                 throw new ProcessingException(element, error);
             }
         }
@@ -248,12 +273,12 @@ public class AnnotationsFileBuilder {
                 .addStatement("category = categories.iterator().next()")
                 .endControlFlow()
                 .addStatement("int id = $T.generateId(action, category)", ANNOTATEDMETHODS_PERCLASS)
-                .beginControlFlow("if (methodMap.containsKey(id))")
+                .beginControlFlow("if ($N.containsKey(id))", FIELD_METHOD_MAP)
                 .beginControlFlow("try")
-                .addStatement("methodMap.get(id).invoke(target, new Object[]{context, intent})")
+                .addStatement("$N.get(id).invoke(target, new Object[]{context, intent})", FIELD_METHOD_MAP)
                 .nextControlFlow("catch (IllegalAccessException e)")
                 .addStatement("e.printStackTrace()")
-                .nextControlFlow("catch (InvocationTargetException e)")
+                .nextControlFlow("catch ($T e)", INVOCATION_TARGET_EXCEPTION)
                 .addStatement("e.printStackTrace()")
                 .endControlFlow()
                 .endControlFlow();
@@ -274,7 +299,7 @@ public class AnnotationsFileBuilder {
                 .add("}")
                 .build();
         return CodeBlock.builder()
-                .addStatement("this.$N = $L", FIELD_FILTER, receiverBlock)
+                .addStatement("this.$N = $L", FIELD_RECEIVER, receiverBlock)
                 .build();
     }
 

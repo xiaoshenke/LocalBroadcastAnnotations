@@ -29,7 +29,7 @@ import javax.tools.Diagnostic;
 import wuxian.me.localbroadcastannotations.annotation.OnReceive;
 
 /**
- * AbstractProcessor debug article: http://www.jianshu.com/p/80a14bc35000
+ * AbstractProcessor debug article: .
  */
 @SupportedAnnotationTypes(value = "wuxian.me.localbroadcastannotations.annotation.OnReceive")
 //@SupportedSourceVersion(value = SourceVersion.RELEASE_7)
@@ -80,10 +80,6 @@ public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
 
     /**
      * collect all annotated method
-     *
-     * @param annotationClass
-     * @param roundEnv
-     * @throws ProcessingException
      */
     private void processAnnotation(Class<? extends Annotation> annotationClass, @NonNull RoundEnvironment roundEnv) throws ProcessingException {
         Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(annotationClass);

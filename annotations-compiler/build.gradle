@@ -8,6 +8,7 @@ dependencies {
     compile 'org.checkerframework:checker-qual:2.1.4'
 
     compile project(':annotations')
+    //compile project(':annotations-lib')
 }
 
 sourceCompatibility = "1.7"
