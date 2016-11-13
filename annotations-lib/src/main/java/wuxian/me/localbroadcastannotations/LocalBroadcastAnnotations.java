@@ -80,7 +80,8 @@ public class LocalBroadcastAnnotations {
 
             BINDER_CACHE.put(targetClass, binder);
         } catch (ClassNotFoundException e) {
-            binder = findReceiverBinder(context, targetClass.getSuperclass());  //try super class
+            //binder = findReceiverBinder(context, targetClass.getSuperclass());  //try super class //FIXME: we can't simply call super class when dealing this
+            binder = NO_OP_BINDER;
         } catch (Exception e) {
             binder = NO_OP_BINDER;
         }

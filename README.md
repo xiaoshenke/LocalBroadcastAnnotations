@@ -99,6 +99,9 @@ findViewById(R.id.tv_blue).setOnClickListener(new View.OnClickListener() {
  ```` 
  wola!
  
+### TODO
+* support class inherit.
+ 
  Enjoy yourself and check the code to know more details~
 
 

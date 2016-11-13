@@ -13,9 +13,15 @@ import wuxian.me.localbroadcastannotations.LocalBroadcastAnnotations;
 import wuxian.me.localbroadcastannotations.RecevierBinder;
 import wuxian.me.localbroadcastannotations.annotation.OnReceive;
 
+/**
+ * TODO: consider super class.bind sub class.bind
+ */
 public class MainActivity extends AppCompatActivity {
     public static final String ACTION_TEXT_BLUE = "ACTION_TEXT_BLUE";
     public static final String ACTION_TEXT_RED = "ACTION_TEXT_RED";
+
+    public static final String CATEGORY_BLUE = "CATEGORY_BLUE";
+    public static final String CATEGORY_RED = "CATEGORY_RED";
 
     private RecevierBinder binder;
     @Override
@@ -28,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 Intent intent = new Intent();
                 intent.setAction(ACTION_TEXT_BLUE);
+                intent.addCategory(CATEGORY_BLUE);
                 LocalBroadcastManager.getInstance(MainActivity.this).sendBroadcast(intent);
             }
         });
@@ -36,19 +43,20 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent();
-                intent.setAction(ACTION_TEXT_RED);
+                intent.setAction(ACTION_TEXT_BLUE);
+                intent.addCategory(CATEGORY_RED);
                 LocalBroadcastManager.getInstance(MainActivity.this).sendBroadcast(intent);
             }
         });
     }
 
-    @OnReceive(ACTION_TEXT_BLUE)
+    @OnReceive(value = ACTION_TEXT_BLUE,category = CATEGORY_BLUE)
     public void onTextBlue(Context context, Intent intent) {
 
         Toast.makeText(this, "onTextBlue", Toast.LENGTH_LONG).show();
     }
 
-    @OnReceive(ACTION_TEXT_RED)
+    @OnReceive(value = ACTION_TEXT_BLUE,category = CATEGORY_RED)
     public void onTextRed(Context context, Intent intent) {
         Toast.makeText(this, "onTextRed", Toast.LENGTH_LONG).show();
     }

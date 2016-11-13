@@ -208,7 +208,9 @@ public class AnnotationsFileBuilder {
 
         MethodSpec.Builder builder = getBaseMethodBuilder("bind")
                 .addParameter(targetParameter)
+                .beginControlFlow("if(this.$N == null)",FIELD_RECEIVER)
                 .addCode(createReceiverBlock(methodsPerClass))
+                .endControlFlow()
                 .addStatement("$T.getInstance(this.$N).registerReceiver(this.$N,this.$N)", LOCAL_BROADCAST_MANAGER, FIELD_CONTEXT, FIELD_RECEIVER, FIELD_FILTER);
 
         return builder.build();
