@@ -10,6 +10,11 @@ import java.util.Map;
 
 /**
  * Created by wuxian on 11/11/2016.
+ *
+ * 当涉及到继承的时候,
+ * 1 子类的bind函数生成的$$Binder类应该能够响应父类的OnReceive注解的函数,(一种更加特殊的情况是子类中没有新的OnReceive函数...)
+ * 2 且这个Binder类应该具有这样的继承关系 SubWhatever$$Binder extends SuperWhatever$$Binder
+ * 3 子类和父类应该共享同一个receiver 不然各自拥有一个receiver带来同时响应同一个父类中的OnReceive注解函数,显然是不合逻辑的
  */
 
 public class LocalBroadcastAnnotations {

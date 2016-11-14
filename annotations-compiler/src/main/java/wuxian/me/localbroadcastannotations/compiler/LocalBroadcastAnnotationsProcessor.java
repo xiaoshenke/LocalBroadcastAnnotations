@@ -55,6 +55,10 @@ public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
     }
 
 
+    /**
+     * 该函数处理所有的具有OnReceive注解的类,生成一个类似Whatever$$Binder implements Binder<Whatever>的类。
+     * 但是注意如果该类的父类也是被OnReceive注解的,那么要生成的类应该长这样SubWhatever$$Binder extends SuperWhatever$$Binder
+     */
     @Override
     public boolean process(@NonNull Set<? extends TypeElement> set,
                            @NonNull RoundEnvironment roundEnv) {
@@ -68,6 +72,7 @@ public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
         try {
             warn(messager, null, "Preparing to create %d generated classes.", mGroupedMethodsMap.size());
             AnnotationsFileBuilder.generateFile(messager, mGroupedMethodsMap, elementUtils, filer);
+            //AnnotationsFileBuilder.generateSubclassFile
             mGroupedMethodsMap.clear();
         } catch (IOException e) {
             error(messager, null, e.getMessage());
