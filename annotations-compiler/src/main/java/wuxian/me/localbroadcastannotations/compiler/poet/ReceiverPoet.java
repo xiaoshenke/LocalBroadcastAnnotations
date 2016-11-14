@@ -140,8 +140,6 @@ public class ReceiverPoet implements IReceiverBinderPoet {
     @Override
     public MethodSpec createConstructorMethod() throws ProcessingException {
         ParameterSpec targetParameter = this.targetParameter;
-
-
         ParameterSpec contextParameter = ParameterSpec.builder(CONTEXT, "context").build();
 
         //add code: this.context = context; this.filter = new IntentFilter();

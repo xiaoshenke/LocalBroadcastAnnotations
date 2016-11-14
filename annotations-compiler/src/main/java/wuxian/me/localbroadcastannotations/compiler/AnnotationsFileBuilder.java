@@ -74,7 +74,7 @@ public class AnnotationsFileBuilder {
             Writer writer = jfo.openWriter();
             JavaFile.builder(packageElement.toString(), binderClass)
                     .addFileComment("This class is generated code from LocalBroadcastAnnotation Lib. Do not modify!")
-                    .addStaticImport(ClassName.get(classTypeElement), "*")
+                    .addStaticImport(ClassName.get(classTypeElement), "*") //TODO: add files whose name like constant or something
                     .build()
                     .writeTo(writer);
             writer.close();
