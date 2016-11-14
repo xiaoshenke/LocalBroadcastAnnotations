@@ -88,9 +88,6 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
 
         this.classTypeElement = elementUtils.getTypeElement(groupedMethods.getEnclosingClassName()); //get class element
 
-        //For eg. "ReceiverBinder<ExampleActivity>"
-        ParameterizedTypeName parameterizedInterface = ParameterizedTypeName.get(RECEIVER_BINDER, TypeName.get(classTypeElement.asType()));
-
         //(MainActivity target)
         this.targetParameter =
                 ParameterSpec.builder(TypeName.get(classTypeElement.asType()), "target")
@@ -113,16 +110,38 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
                         .addField(FIELD_CONTEXT)
                         .addField(FIELD_METHOD_MAP)
                         .addMethod(createConstructorMethod())
+                        .addMethod(createInitWithClassMethod())
                         .addMethod(createBindMethod())
                         .addMethod(createUnbindMethod())
                         .build();
         return binderClass;
     }
 
+    private MethodSpec createInitWithClassMethod() throws ProcessingException {
+        ParameterSpec classParameter = ParameterSpec.builder(CLASS, "clazz").build();
+        MethodSpec.Builder builder = MethodSpec.methodBuilder("initWithClass")
+                .addModifiers(Modifier.PRIVATE)
+                .returns(TypeName.BOOLEAN)
+                .addParameter(classParameter)
+                .addStatement("boolean hasReceiver = false");
+
+        builder.beginControlFlow("for ($T method : clazz.getDeclaredMethods())", METHOD)
+                .addStatement("$L onReceive = method.getAnnotation($L.class);", ON_RECEIVE, ON_RECEIVE)
+                .beginControlFlow("if (onReceive == null)").addStatement("continue").endControlFlow()
+                .addStatement("hasReceiver = true")
+                .addStatement("int id = $L.generateId(onReceive.value(), onReceive.category());", ANNOTATEDMETHODS_PERCLASS)
+                .beginControlFlow("if (this.$N.containsKey(id))", FIELD_METHOD_MAP).addStatement("continue").endControlFlow()
+                .addStatement("this.$N.put(id, method)", FIELD_METHOD_MAP)
+                .addStatement("this.$N.addAction(onReceive.value())", FIELD_FILTER)
+                .addStatement("this.$N.addCategory(onReceive.category())", FIELD_FILTER)
+                .endControlFlow().addStatement("return !hasReceiver");
+        return builder.build();
+    }
+
     @Override
     public MethodSpec createConstructorMethod() throws ProcessingException {
         ParameterSpec targetParameter = this.targetParameter;
-        Map<Integer, AnnotatedMethod> itemsMap = this.groupedMethods.getAnnotatedMethods();
+
 
         ParameterSpec contextParameter = ParameterSpec.builder(CONTEXT, "context").build();
 
@@ -136,24 +155,23 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
                 .addStatement("this.methodMap = new $T<>()", HASHMAP);
 
         //TODO: 这里改成runtime处理
-        // 因为使用静态的java Element难以拿到父类element 也就难以拿到父类的annotated method。
-        // 而intentfilter需要子类和父类中所有的Action Category
-        for (AnnotatedMethod method : itemsMap.values()) {
-            constructorBuilder.addStatement("this.$N.addAction($L)", FIELD_FILTER, method.getAction());
-            if (method.getCategory().equals(AnnotatedMethod.NONE)) {
-                continue;
-            }
-            constructorBuilder.addStatement("this.$N.addCategory($L)", FIELD_FILTER, method.getCategory());
-        }
+        //      因为使用静态的java Element难以拿到父类element 也就难以拿到父类的annotated method。
+        //      而intentfilter需要子类和父类中所有的Action Category
+        //Map<Integer, AnnotatedMethod> itemsMap = this.groupedMethods.getAnnotatedMethods();
+        //for (AnnotatedMethod method : itemsMap.values()) {
+        //    constructorBuilder.addStatement("this.$N.addAction($L)", FIELD_FILTER, method.getAction());
+        //    if (method.getCategory().equals(AnnotatedMethod.NONE)) {
+        //        continue;
+        //    }
+        //    constructorBuilder.addStatement("this.$N.addCategory($L)", FIELD_FILTER, method.getCategory());
+        //}
 
-        //add code: Class<?> clazz = target.getClass() ....
-        constructorBuilder.addStatement("$T<?> clazz = target.getClass()", CLASS);
-        constructorBuilder.beginControlFlow("for ($T method : clazz.getDeclaredMethods())", METHOD)
-                .addStatement("$L onReceive = method.getAnnotation($L.class);", ON_RECEIVE, ON_RECEIVE)
-                .beginControlFlow("if (onReceive == null)").addStatement("continue").endControlFlow()
-                .addStatement("int id = $L.generateId(onReceive.value(), onReceive.category());", ANNOTATEDMETHODS_PERCLASS)
-                .beginControlFlow("if (this.$N.containsKey(id))", FIELD_METHOD_MAP).addStatement("continue").endControlFlow()
-                .addStatement("this.$N.put(id, method)", FIELD_METHOD_MAP)
+        constructorBuilder.addStatement("$T<?> clazz = target.getClass()", CLASS)
+                .beginControlFlow("while (true)")
+                .beginControlFlow("if(initWithClass(clazz))")
+                .addStatement("break")
+                .endControlFlow()
+                .addStatement("clazz = clazz.getSuperclass()")
                 .endControlFlow();
 
         return constructorBuilder.build();

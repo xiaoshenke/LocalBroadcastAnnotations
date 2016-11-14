@@ -35,22 +35,35 @@ public class FakeMainActivity$$Binder implements RecevierBinder<MainActivity> {
         this.context = context;
         Class<?> clazz = target.getClass();
 
-        //record all AnnotatedMethod 如果是subclass 应该记录superclass的onReceive函数
+        while (true) {
+            if (initWithClass(clazz)) {
+                break;
+            }
+            clazz = clazz.getSuperclass();
+        }
+    }
+
+    /**
+     * colloect all OnReceive annotated method with specific classname
+     */
+    private boolean initWithClass(Class<?> clazz) {
+        boolean hasReceiver = false;
         for (Method method : clazz.getDeclaredMethods()) {
             OnReceive onReceive = method.getAnnotation(OnReceive.class);
             if (onReceive == null) {
                 continue;
             }
+            hasReceiver = true;
             int id = AnnotatedMethodsPerClass.generateId(onReceive.value(), onReceive.category());
             if (methodMap.containsKey(id)) {
                 continue;
             } else {
                 filter.addAction(onReceive.value());
                 filter.addCategory(onReceive.category());
-
                 methodMap.put(id, method);
             }
         }
+        return !hasReceiver;
     }
 
     @Override
