@@ -1,15 +1,21 @@
 package wuxian.me.localbroadcastannotations.compiler.poet;
 
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.Map;
 
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.util.Elements;
 
 import wuxian.me.localbroadcastannotations.compiler.AnnotatedMethod;
 import wuxian.me.localbroadcastannotations.compiler.AnnotatedMethodsPerClass;
@@ -67,23 +73,157 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
                     .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
                     .build();
 
-    @Override
-    public TypeSpec buildReceiverClass() {
-        return null;
+    private static final MethodSpec UNBIND_METHOD = getBaseMethodBuilder("unbind")
+            .addStatement("$T.getInstance(this.$N).unregisterReceiver(this.$N)", LOCAL_BROADCAST_MANAGER, FIELD_CONTEXT, FIELD_RECEIVER)
+            .build();
+
+    protected Elements elementUtils;
+    protected AnnotatedMethodsPerClass groupedMethods;
+    protected TypeElement classTypeElement;
+    private ParameterSpec targetParameter;
+
+    public SuperClassReceiverPoet(@NonNull Elements elementUtils, @NonNull AnnotatedMethodsPerClass groupedMethods) {
+        this.elementUtils = elementUtils;
+        this.groupedMethods = groupedMethods;
+
+        this.classTypeElement = elementUtils.getTypeElement(groupedMethods.getEnclosingClassName()); //get class element
+
+        //For eg. "ReceiverBinder<ExampleActivity>"
+        ParameterizedTypeName parameterizedInterface = ParameterizedTypeName.get(RECEIVER_BINDER, TypeName.get(classTypeElement.asType()));
+
+        //(MainActivity target)
+        this.targetParameter =
+                ParameterSpec.builder(TypeName.get(classTypeElement.asType()), "target")
+                        .addModifiers(Modifier.FINAL)
+                        .build();
+
     }
 
     @Override
-    public MethodSpec createConstructorMethod(ParameterSpec targetParameter, Map<Integer, AnnotatedMethod> itemsMap) throws ProcessingException {
-        return null;
+    public TypeSpec buildReceiverClass() throws ProcessingException {
+        //For eg. "ReceiverBinder<ExampleActivity>"
+        ParameterizedTypeName parameterizedInterface = ParameterizedTypeName.get(RECEIVER_BINDER, TypeName.get(classTypeElement.asType()));
+
+        TypeSpec binderClass =
+                TypeSpec.classBuilder(classTypeElement.getSimpleName() + SUFFIX)
+                        .addModifiers(Modifier.FINAL, Modifier.PUBLIC)
+                        .addSuperinterface(parameterizedInterface)
+                        .addField(FIELD_RECEIVER)
+                        .addField(FIELD_FILTER)
+                        .addField(FIELD_CONTEXT)
+                        .addField(FIELD_METHOD_MAP)
+                        .addMethod(createConstructorMethod())
+                        .addMethod(createBindMethod())
+                        .addMethod(createUnbindMethod())
+                        .build();
+        return binderClass;
     }
 
     @Override
-    public MethodSpec createBindMethod(ParameterSpec targetParameter, AnnotatedMethodsPerClass methodsPerClass) throws ProcessingException {
-        return null;
+    public MethodSpec createConstructorMethod() throws ProcessingException {
+        ParameterSpec targetParameter = this.targetParameter;
+        Map<Integer, AnnotatedMethod> itemsMap = this.groupedMethods.getAnnotatedMethods();
+
+        ParameterSpec contextParameter = ParameterSpec.builder(CONTEXT, "context").build();
+
+        //add code: this.context = context; this.filter = new IntentFilter();
+        MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder()
+                .addModifiers(Modifier.PUBLIC)
+                .addParameter(contextParameter)
+                .addParameter(targetParameter)
+                .addStatement("this.$N = context", FIELD_CONTEXT)
+                .addStatement("this.$N = new IntentFilter()", FIELD_FILTER)
+                .addStatement("this.methodMap = new $T<>()", HASHMAP);
+
+
+        //add code: this.filter.addAction(); this.filter.addCategory();
+        for (AnnotatedMethod method : itemsMap.values()) {
+            constructorBuilder.addStatement("this.$N.addAction($L)", FIELD_FILTER, method.getAction());
+            if (method.getCategory().equals(AnnotatedMethod.NONE)) {
+                continue;
+            }
+            constructorBuilder.addStatement("this.$N.addCategory($L)", FIELD_FILTER, method.getCategory());
+        }
+
+        //add code: Class<?> clazz = target.getClass() ....
+        constructorBuilder.addStatement("$T<?> clazz = target.getClass()", CLASS);
+        constructorBuilder.beginControlFlow("for ($T method : clazz.getDeclaredMethods())", METHOD)
+                .addStatement("$L onReceive = method.getAnnotation($L.class);", ON_RECEIVE, ON_RECEIVE)
+                .beginControlFlow("if (onReceive == null)").addStatement("continue").endControlFlow()
+                .addStatement("int id = $L.generateId(onReceive.value(), onReceive.category());", ANNOTATEDMETHODS_PERCLASS)
+                .beginControlFlow("if (this.$N.containsKey(id))", FIELD_METHOD_MAP).addStatement("continue").endControlFlow()
+                .addStatement("this.$N.put(id, method)", FIELD_METHOD_MAP)
+                .endControlFlow();
+
+        return constructorBuilder.build();
+    }
+
+    /**
+     * 1 init receiver
+     * 2 LocalBroadcast.getInstance(context).register();
+     */
+    @Override
+    public MethodSpec createBindMethod() throws ProcessingException {
+        ParameterSpec targetParameter = this.targetParameter;
+        AnnotatedMethodsPerClass methodsPerClass = this.groupedMethods;
+
+        MethodSpec.Builder builder = getBaseMethodBuilder("bind")
+                .addParameter(targetParameter)
+                .beginControlFlow("if(this.$N == null)", FIELD_RECEIVER)
+                .addCode(createReceiverBlock(methodsPerClass))
+                .endControlFlow()
+                .addStatement("$T.getInstance(this.$N).registerReceiver(this.$N,this.$N)", LOCAL_BROADCAST_MANAGER, FIELD_CONTEXT, FIELD_RECEIVER, FIELD_FILTER);
+
+        return builder.build();
+    }
+
+    private CodeBlock createReceiverBlock(@NonNull AnnotatedMethodsPerClass methodsPerClass) throws ProcessingException {
+        CodeBlock receiverBlock = CodeBlock.builder()
+                .add("new $T() {\n", BROADCAST_RECEIVER)
+                .indent()
+                .add(createOnReceiveListenerMethod(methodsPerClass).toString())
+                .unindent()
+                .add("}")
+                .build();
+        return CodeBlock.builder()
+                .addStatement("this.$N = $L", FIELD_RECEIVER, receiverBlock)
+                .build();
+    }
+
+    @NonNull
+    private MethodSpec createOnReceiveListenerMethod(@NonNull AnnotatedMethodsPerClass methodsPerClass) throws ProcessingException {
+
+        MethodSpec.Builder builder = getBaseMethodBuilder("onReceive").addParameter(CONTEXT, "context")
+                .addParameter(INTENT, "intent")
+                .addStatement("String action = intent.getAction()")
+                .addStatement("$T<String> categories = intent.getCategories()", SET)
+                .addStatement("String category = $T.NONE", ANNOTATED_METHOD)
+                .beginControlFlow("if (categories != null && categories.size() != 0)")
+                .addStatement("category = categories.iterator().next()")
+                .endControlFlow()
+                .addStatement("int id = $T.generateId(action, category)", ANNOTATEDMETHODS_PERCLASS)
+                .beginControlFlow("if ($N.containsKey(id))", FIELD_METHOD_MAP)
+                .beginControlFlow("try")
+                .addStatement("$N.get(id).invoke(target, new Object[]{context, intent})", FIELD_METHOD_MAP)
+                .nextControlFlow("catch (IllegalAccessException e)")
+                .addStatement("e.printStackTrace()")
+                .nextControlFlow("catch ($T e)", INVOCATION_TARGET_EXCEPTION)
+                .addStatement("e.printStackTrace()")
+                .endControlFlow()
+                .endControlFlow();
+        return builder.build();
     }
 
     @Override
-    public MethodSpec createUnbindMethod(ParameterSpec targetParameter, AnnotatedMethodsPerClass methodsPerClass) throws ProcessingException {
-        return null;
+    public MethodSpec createUnbindMethod() throws ProcessingException {
+        return UNBIND_METHOD;
     }
+
+    protected static MethodSpec.Builder getBaseMethodBuilder(@NonNull String name) {
+        return MethodSpec.methodBuilder(name)
+                .addModifiers(Modifier.PUBLIC)
+                .returns(void.class)
+                .addAnnotation(Override.class);
+    }
+
 }

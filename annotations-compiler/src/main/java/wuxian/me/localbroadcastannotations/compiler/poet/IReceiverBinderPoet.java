@@ -1,13 +1,7 @@
 package wuxian.me.localbroadcastannotations.compiler.poet;
 
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeSpec;
-
-import java.util.Map;
-
-import wuxian.me.localbroadcastannotations.compiler.AnnotatedMethod;
-import wuxian.me.localbroadcastannotations.compiler.AnnotatedMethodsPerClass;
 import wuxian.me.localbroadcastannotations.compiler.ProcessingException;
 
 /**
@@ -18,11 +12,11 @@ import wuxian.me.localbroadcastannotations.compiler.ProcessingException;
 
 public interface IReceiverBinderPoet {
 
-    TypeSpec buildReceiverClass();
+    TypeSpec buildReceiverClass() throws ProcessingException;
 
-    MethodSpec createConstructorMethod(ParameterSpec targetParameter, Map<Integer, AnnotatedMethod> itemsMap) throws ProcessingException;
+    MethodSpec createConstructorMethod() throws ProcessingException;
 
-    MethodSpec createBindMethod(ParameterSpec targetParameter, AnnotatedMethodsPerClass methodsPerClass) throws ProcessingException;
+    MethodSpec createBindMethod() throws ProcessingException;
 
-    MethodSpec createUnbindMethod(ParameterSpec targetParameter, AnnotatedMethodsPerClass methodsPerClass) throws ProcessingException;
+    MethodSpec createUnbindMethod() throws ProcessingException;
 }
