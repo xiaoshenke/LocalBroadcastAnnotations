@@ -67,4 +67,8 @@ public class AnnotatedMethodsPerClass {
 
     }
 
+    public boolean contains(@NonNull AnnotatedMethod method) {
+        return mItemsMap.containsKey(generateId(method.getAction(), method.getCategory()));
+    }
+
 }

@@ -29,11 +29,13 @@ public class FakeMainActivity$$Binder implements RecevierBinder<MainActivity> {
 
     private Context context;
     private Map<Integer, Method> methodMap = new HashMap<>();
+    private IntentFilter filter = new IntentFilter();
 
     public FakeMainActivity$$Binder(Context context, MainActivity target) {
         this.context = context;
         Class<?> clazz = target.getClass();
 
+        //record all AnnotatedMethod 如果是subclass 应该记录superclass的onReceive函数
         for (Method method : clazz.getDeclaredMethods()) {
             OnReceive onReceive = method.getAnnotation(OnReceive.class);
             if (onReceive == null) {
@@ -43,6 +45,9 @@ public class FakeMainActivity$$Binder implements RecevierBinder<MainActivity> {
             if (methodMap.containsKey(id)) {
                 continue;
             } else {
+                filter.addAction(onReceive.value());
+                filter.addCategory(onReceive.category());
+
                 methodMap.put(id, method);
             }
         }
@@ -72,9 +77,7 @@ public class FakeMainActivity$$Binder implements RecevierBinder<MainActivity> {
             }
         };
 
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(MainActivity.ACTION_TEXT_BLUE);
-        filter.addAction(MainActivity.ACTION_TEXT_RED);
+
         LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter); //intentfilter 已经被初始化
 
     }

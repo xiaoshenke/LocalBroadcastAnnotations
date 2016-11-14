@@ -10,7 +10,7 @@ import java.util.Map;
 
 /**
  * Created by wuxian on 11/11/2016.
- *
+ * <p>
  * 当涉及到继承的时候,
  * 1 子类的bind函数生成的$$Binder类应该能够响应父类的OnReceive注解的函数,(一种更加特殊的情况是子类中没有新的OnReceive函数...)
  * 2 且这个Binder类应该具有这样的继承关系 SubWhatever$$Binder extends SuperWhatever$$Binder
@@ -39,7 +39,6 @@ public class LocalBroadcastAnnotations {
     }
 
     public static void bind(@Nullable Object target, @Nullable Context context) {
-
         if (target == null || context == null) {
             throw new RuntimeException("Bind method only accepts non-null parameters.");
         }
@@ -51,20 +50,14 @@ public class LocalBroadcastAnnotations {
         } catch (Exception e) {
             throw new RuntimeException("Unable to bind  for " + target.getClass().getName(), e);
         }
-
     }
 
-    private static RecevierBinder findReceiverBinder(Context context, Object target)
+    /**
+     * find specific binder using classname
+     */
+    private static RecevierBinder findReceiverBinderWithClass(Context context, Object target, Class<?> targetClass)
             throws IllegalAccessException, InstantiationException {
-
-        if (target == null || context == null) {
-
-            return NO_OP_BINDER;
-        }
-
-        Class<?> targetClass = target.getClass();
         String className = targetClass.getName();
-
         if (className.startsWith(ANDROID_PREFIX) || className.startsWith(JAVA_PREFIX)) {
             return NO_OP_BINDER;
         }
@@ -85,13 +78,22 @@ public class LocalBroadcastAnnotations {
 
             BINDER_CACHE.put(targetClass, binder);
         } catch (ClassNotFoundException e) {
-            //binder = findReceiverBinder(context, targetClass.getSuperclass());  //try super class //FIXME: we can't simply call super class when dealing this
-            binder = NO_OP_BINDER;
+            //this will happen when sub-class has no OnReceive Annotated method while supper-class have,and sub-class called bind
+            binder = findReceiverBinderWithClass(context, target, targetClass.getSuperclass());  //try super class
         } catch (Exception e) {
             binder = NO_OP_BINDER;
         }
 
         return binder;
+    }
+
+    private static RecevierBinder findReceiverBinder(Context context, Object target)
+            throws IllegalAccessException, InstantiationException {
+        if (target == null || context == null) {
+            return NO_OP_BINDER;
+        }
+
+        return findReceiverBinderWithClass(context, target, target.getClass());
     }
 
     public static void unbind(@Nullable Object target) {
@@ -109,7 +111,6 @@ public class LocalBroadcastAnnotations {
         } catch (Exception e) {
             throw new RuntimeException("Unable to unbind sensors for " + targetClass.getName(), e);
         }
-
     }
 
     private static RecevierBinder checkCacheForBinderClass(@NonNull Object target) {

@@ -135,8 +135,9 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
                 .addStatement("this.$N = new IntentFilter()", FIELD_FILTER)
                 .addStatement("this.methodMap = new $T<>()", HASHMAP);
 
-
-        //add code: this.filter.addAction(); this.filter.addCategory();
+        //TODO: 这里改成runtime处理
+        // 因为使用静态的java Element难以拿到父类element 也就难以拿到父类的annotated method。
+        // 而intentfilter需要子类和父类中所有的Action Category
         for (AnnotatedMethod method : itemsMap.values()) {
             constructorBuilder.addStatement("this.$N.addAction($L)", FIELD_FILTER, method.getAction());
             if (method.getCategory().equals(AnnotatedMethod.NONE)) {

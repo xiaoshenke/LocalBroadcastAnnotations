@@ -72,7 +72,6 @@ public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
         try {
             warn(messager, null, "Preparing to create %d generated classes.", mGroupedMethodsMap.size());
             AnnotationsFileBuilder.generateFile(messager, mGroupedMethodsMap, elementUtils, filer);
-            //AnnotationsFileBuilder.generateSubclassFile
             mGroupedMethodsMap.clear();
         } catch (IOException e) {
             error(messager, null, e.getMessage());
@@ -88,7 +87,7 @@ public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
      */
     private void processAnnotation(Class<? extends Annotation> annotationClass, @NonNull RoundEnvironment roundEnv) throws ProcessingException {
         Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(annotationClass);
-        warn(messager, null, "Processing %d elements annotated with @%s", elements.size(), elements);
+        info(messager, null, "Processing %d elements annotated with @%s", elements.size(), elements);
 
         for (Element element : elements) {
             if (element.getKind() != ElementKind.METHOD) {
@@ -112,7 +111,6 @@ public class LocalBroadcastAnnotationsProcessor extends AbstractProcessor {
         checkMethodValidity(annotatedMethod);
 
         TypeElement enclosingClass = findEnclosingClass(annotatedMethod);
-
         if (enclosingClass == null) {
             throw new ProcessingException(null,
                     String.format("Can not find enclosing class for method %s",
