@@ -27,7 +27,7 @@ import javax.tools.JavaFileObject;
 import wuxian.me.localbroadcastannotations.annotation.ListenerMethod;
 import wuxian.me.localbroadcastannotations.annotation.OnReceive;
 import wuxian.me.localbroadcastannotations.compiler.poet.IReceiverBinderPoet;
-import wuxian.me.localbroadcastannotations.compiler.poet.SuperClassReceiverPoet;
+import wuxian.me.localbroadcastannotations.compiler.poet.ReceiverPoet;
 
 /**
  * Created by wuxian on 11/11/2016.
@@ -64,7 +64,7 @@ public class AnnotationsFileBuilder {
 
             TypeElement classTypeElement = elementUtils.getTypeElement(groupedMethods.getEnclosingClassName());
 
-            IReceiverBinderPoet poet = new SuperClassReceiverPoet(elementUtils, groupedMethods);
+            IReceiverBinderPoet poet = new ReceiverPoet(elementUtils, groupedMethods);
             TypeSpec binderClass = poet.buildReceiverClass();
 
             // Output our generated file with the same package as the target class.

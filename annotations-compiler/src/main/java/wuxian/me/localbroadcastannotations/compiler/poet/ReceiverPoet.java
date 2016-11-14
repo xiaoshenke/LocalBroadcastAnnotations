@@ -11,13 +11,10 @@ import com.squareup.javapoet.TypeSpec;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import java.util.Map;
-
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 
-import wuxian.me.localbroadcastannotations.compiler.AnnotatedMethod;
 import wuxian.me.localbroadcastannotations.compiler.AnnotatedMethodsPerClass;
 import wuxian.me.localbroadcastannotations.compiler.ProcessingException;
 
@@ -25,51 +22,51 @@ import wuxian.me.localbroadcastannotations.compiler.ProcessingException;
  * Created by wuxian on 14/11/2016.
  */
 
-public class SuperClassReceiverPoet implements IReceiverBinderPoet {
-    protected static final String SUFFIX = "$$ReceiverBinder";
+public class ReceiverPoet implements IReceiverBinderPoet {
+    private static final String SUFFIX = "$$ReceiverBinder";
 
-    protected static final ClassName ANNOTATEDMETHODS_PERCLASS
+    private static final ClassName ANNOTATEDMETHODS_PERCLASS
             = ClassName.get("wuxian.me.localbroadcastannotations.compiler", "AnnotatedMethodsPerClass");
-    protected static final ClassName ON_RECEIVE
+    private static final ClassName ON_RECEIVE
             = ClassName.get("wuxian.me.localbroadcastannotations.annotation", "OnReceive");
-    protected static final ClassName ANNOTATED_METHOD
+    private static final ClassName ANNOTATED_METHOD
             = ClassName.get("wuxian.me.localbroadcastannotations.compiler", "AnnotatedMethod");
-    protected static final ClassName RECEIVER_BINDER
+    private static final ClassName RECEIVER_BINDER
             = ClassName.get("wuxian.me.localbroadcastannotations", "RecevierBinder");
 
-    protected static final ClassName INVOCATION_TARGET_EXCEPTION = ClassName.get("java.lang.reflect", "InvocationTargetException");
+    private static final ClassName INVOCATION_TARGET_EXCEPTION = ClassName.get("java.lang.reflect", "InvocationTargetException");
 
-    protected static final ClassName METHOD = ClassName.get("java.lang.reflect", "Method");
-    protected static final ClassName CLASS = ClassName.get("java.lang", "Class");
+    private static final ClassName METHOD = ClassName.get("java.lang.reflect", "Method");
+    private static final ClassName CLASS = ClassName.get("java.lang", "Class");
 
-    protected static final ClassName INTEGER = ClassName.get("java.lang", "Integer");
-    protected static final ClassName SET = ClassName.get("java.util", "Set");
-    protected static final ClassName MAP = ClassName.get("java.util", "Map");
-    protected static final ClassName HASHMAP = ClassName.get("java.util", "HashMap");
+    private static final ClassName INTEGER = ClassName.get("java.lang", "Integer");
+    private static final ClassName SET = ClassName.get("java.util", "Set");
+    private static final ClassName MAP = ClassName.get("java.util", "Map");
+    private static final ClassName HASHMAP = ClassName.get("java.util", "HashMap");
 
-    protected static final ClassName LOG = ClassName.get("android.util", "Log");
-    protected static final ClassName LOCAL_BROADCAST_MANAGER = ClassName.get("android.support.v4.content", "LocalBroadcastManager");
-    protected static final ClassName INTENT = ClassName.get("android.content", "Intent");
-    protected static final ClassName CONTEXT = ClassName.get("android.content", "Context");
-    protected static final ClassName BROADCAST_RECEIVER = ClassName.get("android.content", "BroadcastReceiver");
-    protected static final ClassName INTENT_FILTER = ClassName.get("android.content", "IntentFilter");
+    private static final ClassName LOG = ClassName.get("android.util", "Log");
+    private static final ClassName LOCAL_BROADCAST_MANAGER = ClassName.get("android.support.v4.content", "LocalBroadcastManager");
+    private static final ClassName INTENT = ClassName.get("android.content", "Intent");
+    private static final ClassName CONTEXT = ClassName.get("android.content", "Context");
+    private static final ClassName BROADCAST_RECEIVER = ClassName.get("android.content", "BroadcastReceiver");
+    private static final ClassName INTENT_FILTER = ClassName.get("android.content", "IntentFilter");
 
-    protected static final FieldSpec FIELD_CONTEXT =
+    private static final FieldSpec FIELD_CONTEXT =
             FieldSpec.builder(CONTEXT, "context")
                     .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
                     .build();
 
-    protected static final FieldSpec FIELD_RECEIVER =
+    private static final FieldSpec FIELD_RECEIVER =
             FieldSpec.builder(BROADCAST_RECEIVER, "receiver")
                     .addModifiers(Modifier.PROTECTED)
                     .build();
 
-    protected static final FieldSpec FIELD_FILTER =
+    private static final FieldSpec FIELD_FILTER =
             FieldSpec.builder(INTENT_FILTER, "filter")
                     .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
                     .build();
 
-    protected static final FieldSpec FIELD_METHOD_MAP =
+    private static final FieldSpec FIELD_METHOD_MAP =
             FieldSpec.builder(ParameterizedTypeName.get(MAP, INTEGER, METHOD), "methodMap")
                     .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
                     .build();
@@ -78,12 +75,12 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
             .addStatement("$T.getInstance(this.$N).unregisterReceiver(this.$N)", LOCAL_BROADCAST_MANAGER, FIELD_CONTEXT, FIELD_RECEIVER)
             .build();
 
-    protected Elements elementUtils;
-    protected AnnotatedMethodsPerClass groupedMethods;
-    protected TypeElement classTypeElement;
+    private Elements elementUtils;
+    private AnnotatedMethodsPerClass groupedMethods;
+    private TypeElement classTypeElement;
     private ParameterSpec targetParameter;
 
-    public SuperClassReceiverPoet(@NonNull Elements elementUtils, @NonNull AnnotatedMethodsPerClass groupedMethods) {
+    public ReceiverPoet(@NonNull Elements elementUtils, @NonNull AnnotatedMethodsPerClass groupedMethods) {
         this.elementUtils = elementUtils;
         this.groupedMethods = groupedMethods;
 
@@ -136,7 +133,7 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
                 .addStatement("this.$N.addAction(onReceive.value())", FIELD_FILTER)
                 .addStatement("$T.e(\"constructor\",\"addAction \"+onReceive.value())", LOG)
                 .addStatement("this.$N.addCategory(onReceive.category())", FIELD_FILTER)
-                .endControlFlow().addStatement("return !hasReceiver");
+                .endControlFlow().addStatement("return hasReceiver");
         return builder.build();
     }
 
@@ -169,10 +166,9 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
         //}
 
         constructorBuilder.addStatement("$T<?> clazz = target.getClass()", CLASS)
-                .beginControlFlow("while (true)")
-                .beginControlFlow("if(initWithClass(clazz))")
-                .addStatement("break")
-                .endControlFlow()
+                .addStatement("initWithClass(clazz)")
+                .addStatement("clazz = clazz.getSuperclass()")
+                .beginControlFlow("while (initWithClass(clazz))")
                 .addStatement("clazz = clazz.getSuperclass()")
                 .endControlFlow();
 
@@ -244,7 +240,7 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
         return UNBIND_METHOD;
     }
 
-    protected static MethodSpec.Builder getBaseMethodBuilder(@NonNull String name) {
+    private static MethodSpec.Builder getBaseMethodBuilder(@NonNull String name) {
         return MethodSpec.methodBuilder(name)
                 .addModifiers(Modifier.PUBLIC)
                 .returns(void.class)

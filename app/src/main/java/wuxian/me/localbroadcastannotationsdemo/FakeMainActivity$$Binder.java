@@ -5,9 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.support.v4.content.LocalBroadcastManager;
-import android.util.Log;
-
-import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -21,10 +18,7 @@ import wuxian.me.localbroadcastannotations.compiler.AnnotatedMethodsPerClass;
 
 /**
  * Created by wuxian on 12/11/2016.
- *
- * fake binder,implement by runtime reflection.
  */
-
 public class FakeMainActivity$$Binder implements RecevierBinder<MainActivity> {
 
     private Context context;
@@ -35,10 +29,9 @@ public class FakeMainActivity$$Binder implements RecevierBinder<MainActivity> {
         this.context = context;
         Class<?> clazz = target.getClass();
 
-        while (true) {
-            if (initWithClass(clazz)) {
-                break;
-            }
+        initWithClass(clazz);
+        clazz = clazz.getSuperclass();
+        while (initWithClass(clazz)) {
             clazz = clazz.getSuperclass();
         }
     }
@@ -63,7 +56,7 @@ public class FakeMainActivity$$Binder implements RecevierBinder<MainActivity> {
                 methodMap.put(id, method);
             }
         }
-        return !hasReceiver;
+        return hasReceiver;
     }
 
     @Override
@@ -89,15 +82,11 @@ public class FakeMainActivity$$Binder implements RecevierBinder<MainActivity> {
                 }
             }
         };
-
-
         LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter); //intentfilter 已经被初始化
-
     }
 
     @Override
     public void unbind() {
         LocalBroadcastManager.getInstance(context).unregisterReceiver(null);
-
     }
 }

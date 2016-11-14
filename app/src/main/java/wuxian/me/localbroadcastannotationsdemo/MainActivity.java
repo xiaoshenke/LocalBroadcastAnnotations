@@ -13,17 +13,15 @@ import wuxian.me.localbroadcastannotations.LocalBroadcastAnnotations;
 import wuxian.me.localbroadcastannotations.RecevierBinder;
 import wuxian.me.localbroadcastannotations.annotation.OnReceive;
 
-/**
- * TODO: consider super class.bind sub class.bind
- */
 public class MainActivity extends AppCompatActivity {
     public static final String ACTION_TEXT_BLUE = "ACTION_TEXT_BLUE";
     public static final String ACTION_TEXT_RED = "ACTION_TEXT_RED";
 
+
     public static final String CATEGORY_BLUE = "CATEGORY_BLUE";
     public static final String CATEGORY_RED = "CATEGORY_RED";
 
-    private RecevierBinder binder;
+    protected RecevierBinder binder;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,21 +60,13 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
-        if (binder == null) {
-            binder = new FakeMainActivity$$Binder(this, this);
-        }
-        //binder.bind(this);
-        //LocalBroadcastAnnotations.bind(this);
+        LocalBroadcastAnnotations.bind(this);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
 
-        if (binder != null) {
-            binder.unbind();
-        }
-        //LocalBroadcastAnnotations.unbind(this);
+        LocalBroadcastAnnotations.unbind(this);
     }
 }
