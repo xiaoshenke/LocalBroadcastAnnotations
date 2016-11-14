@@ -47,6 +47,7 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
     protected static final ClassName MAP = ClassName.get("java.util", "Map");
     protected static final ClassName HASHMAP = ClassName.get("java.util", "HashMap");
 
+    protected static final ClassName LOG = ClassName.get("android.util", "Log");
     protected static final ClassName LOCAL_BROADCAST_MANAGER = ClassName.get("android.support.v4.content", "LocalBroadcastManager");
     protected static final ClassName INTENT = ClassName.get("android.content", "Intent");
     protected static final ClassName CONTEXT = ClassName.get("android.content", "Context");
@@ -133,6 +134,7 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
                 .beginControlFlow("if (this.$N.containsKey(id))", FIELD_METHOD_MAP).addStatement("continue").endControlFlow()
                 .addStatement("this.$N.put(id, method)", FIELD_METHOD_MAP)
                 .addStatement("this.$N.addAction(onReceive.value())", FIELD_FILTER)
+                .addStatement("$T.e(\"constructor\",\"addAction \"+onReceive.value())", LOG)
                 .addStatement("this.$N.addCategory(onReceive.category())", FIELD_FILTER)
                 .endControlFlow().addStatement("return !hasReceiver");
         return builder.build();
@@ -154,7 +156,7 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
                 .addStatement("this.$N = new IntentFilter()", FIELD_FILTER)
                 .addStatement("this.methodMap = new $T<>()", HASHMAP);
 
-        //TODO: 这里改成runtime处理
+        //      这里改成runtime处理
         //      因为使用静态的java Element难以拿到父类element 也就难以拿到父类的annotated method。
         //      而intentfilter需要子类和父类中所有的Action Category
         //Map<Integer, AnnotatedMethod> itemsMap = this.groupedMethods.getAnnotatedMethods();
@@ -188,9 +190,11 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
 
         MethodSpec.Builder builder = getBaseMethodBuilder("bind")
                 .addParameter(targetParameter)
-                .beginControlFlow("if(this.$N == null)", FIELD_RECEIVER)
-                .addCode(createReceiverBlock(methodsPerClass))
+                .addStatement("$T.e(\"bind\",\"begin to bind\")", LOG)
+                .beginControlFlow("if(this.$N != null)", FIELD_RECEIVER)
+                .addStatement("return")
                 .endControlFlow()
+                .addCode(createReceiverBlock(methodsPerClass))
                 .addStatement("$T.getInstance(this.$N).registerReceiver(this.$N,this.$N)", LOCAL_BROADCAST_MANAGER, FIELD_CONTEXT, FIELD_RECEIVER, FIELD_FILTER);
 
         return builder.build();
@@ -214,6 +218,7 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
 
         MethodSpec.Builder builder = getBaseMethodBuilder("onReceive").addParameter(CONTEXT, "context")
                 .addParameter(INTENT, "intent")
+                .addStatement("$T.e(\"onReceive\",\"onReceive\")", LOG)
                 .addStatement("String action = intent.getAction()")
                 .addStatement("$T<String> categories = intent.getCategories()", SET)
                 .addStatement("String category = $T.NONE", ANNOTATED_METHOD)
@@ -222,6 +227,7 @@ public class SuperClassReceiverPoet implements IReceiverBinderPoet {
                 .endControlFlow()
                 .addStatement("int id = $T.generateId(action, category)", ANNOTATEDMETHODS_PERCLASS)
                 .beginControlFlow("if ($N.containsKey(id))", FIELD_METHOD_MAP)
+                .addStatement("$T.e(\"onReceive\",\"find correct Method begin to invokd\")", LOG)
                 .beginControlFlow("try")
                 .addStatement("$N.get(id).invoke(target, new Object[]{context, intent})", FIELD_METHOD_MAP)
                 .nextControlFlow("catch (IllegalAccessException e)")

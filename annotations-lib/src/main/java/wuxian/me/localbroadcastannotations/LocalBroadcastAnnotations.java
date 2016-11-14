@@ -3,10 +3,12 @@ package wuxian.me.localbroadcastannotations;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.util.Log;
 
+import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import wuxian.me.localbroadcastannotations.annotation.OnReceive;
 
 /**
  * Created by wuxian on 11/11/2016.
@@ -66,7 +68,7 @@ public class LocalBroadcastAnnotations {
         if (binder != null) {
             return binder;
         }
-
+        binder = NO_OP_BINDER;
         try {
             Class<?> viewBindingClass = Class.forName(className + SUFFIX);
 
@@ -76,15 +78,26 @@ public class LocalBroadcastAnnotations {
                 return NO_OP_BINDER;
             }
 
-            BINDER_CACHE.put(targetClass, binder);
+            BINDER_CACHE.put(target.getClass(), binder);
+
         } catch (ClassNotFoundException e) {
-            //this will happen when sub-class has no OnReceive Annotated method while supper-class have,and sub-class called bind
-            binder = findReceiverBinderWithClass(context, target, targetClass.getSuperclass());  //try super class
         } catch (Exception e) {
-            binder = NO_OP_BINDER;
         }
 
         return binder;
+    }
+
+    private static boolean shouldTrySupperClass(Class<?> clazz) {
+        boolean hasReceiver = false;
+        for (Method method : clazz.getDeclaredMethods()) {
+            OnReceive onReceive = method.getAnnotation(OnReceive.class);
+            if (onReceive == null) {
+                continue;
+            }
+            hasReceiver = true;
+            break;
+        }
+        return hasReceiver;
     }
 
     private static RecevierBinder findReceiverBinder(Context context, Object target)
@@ -93,7 +106,14 @@ public class LocalBroadcastAnnotations {
             return NO_OP_BINDER;
         }
 
-        return findReceiverBinderWithClass(context, target, target.getClass());
+        Class<?> clazz = target.getClass();
+        RecevierBinder binder;
+        while ((binder = findReceiverBinderWithClass(context, target, clazz)) == NO_OP_BINDER && shouldTrySupperClass(clazz.getSuperclass())) {
+            clazz = clazz.getSuperclass();
+        }
+
+        RecevierBinder ret = checkCacheForBinderClass(target);
+        return ret;
     }
 
     public static void unbind(@Nullable Object target) {

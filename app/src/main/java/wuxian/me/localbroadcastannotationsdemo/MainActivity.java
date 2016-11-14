@@ -34,7 +34,6 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 Intent intent = new Intent();
                 intent.setAction(ACTION_TEXT_BLUE);
-                intent.addCategory(CATEGORY_BLUE);
                 LocalBroadcastManager.getInstance(MainActivity.this).sendBroadcast(intent);
             }
         });
@@ -43,20 +42,19 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent();
-                intent.setAction(ACTION_TEXT_BLUE);
-                intent.addCategory(CATEGORY_RED);
+                intent.setAction(ACTION_TEXT_RED);
                 LocalBroadcastManager.getInstance(MainActivity.this).sendBroadcast(intent);
             }
         });
     }
 
-    @OnReceive(value = ACTION_TEXT_BLUE,category = CATEGORY_BLUE)
+    @OnReceive(value = ACTION_TEXT_BLUE)
     public void onTextBlue(Context context, Intent intent) {
 
         Toast.makeText(this, "onTextBlue", Toast.LENGTH_LONG).show();
     }
 
-    @OnReceive(value = ACTION_TEXT_BLUE,category = CATEGORY_RED)
+    @OnReceive(value = ACTION_TEXT_RED)
     public void onTextRed(Context context, Intent intent) {
         Toast.makeText(this, "onTextRed", Toast.LENGTH_LONG).show();
     }
@@ -69,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
             binder = new FakeMainActivity$$Binder(this, this);
         }
         //binder.bind(this);
-        LocalBroadcastAnnotations.bind(this);
+        //LocalBroadcastAnnotations.bind(this);
     }
 
     @Override
@@ -79,6 +77,6 @@ public class MainActivity extends AppCompatActivity {
         if (binder != null) {
             binder.unbind();
         }
-        LocalBroadcastAnnotations.unbind(this);
+        //LocalBroadcastAnnotations.unbind(this);
     }
 }
