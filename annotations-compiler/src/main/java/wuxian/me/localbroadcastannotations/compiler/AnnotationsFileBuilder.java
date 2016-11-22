@@ -69,18 +69,23 @@ public class AnnotationsFileBuilder {
 
             // Output our generated file with the same package as the target class.
             PackageElement packageElement = elementUtils.getPackageOf(classTypeElement);
+            List<ClassName> constantClassNames = ConstantFileGuesser.getInstance().guess(sMessager, packageElement);
+
             JavaFileObject jfo =
                     filer.createSourceFile(classTypeElement.getQualifiedName() + SUFFIX);
             Writer writer = jfo.openWriter();
-            JavaFile.builder(packageElement.toString(), binderClass)
+            JavaFile.Builder builder = JavaFile.builder(packageElement.toString(), binderClass)
                     .addFileComment("This class is generated code from LocalBroadcastAnnotation Lib. Do not modify!")
-                    .addStaticImport(ClassName.get(classTypeElement), "*") //TODO: add files whose name like constant or something
-                    .build()
-                    .writeTo(writer);
+                    .addStaticImport(ClassName.get(classTypeElement), "*");
+
+            for (ClassName className : constantClassNames) {
+                builder.addStaticImport(className, "*");  //add contant files
+            }
+
+            builder.build().writeTo(writer);
             writer.close();
         }
     }
-
 
     /**
      * first check parameter length
