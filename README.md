@@ -4,8 +4,9 @@ Android - Annotate methods to use as listeners for localbroadcast receivers.Insp
 I know lots of you use libraries like [EventBus](https://github.com/greenrobot/EventBus) to simplify code,but actually Android has a build-in component to achieve this,that is LocalBroadcastManager.
 
 LocalBroadcast uses like Broadcast,but can only be registed in code,can't be registed in AndroidManifest.               
+
 LocalBroadcast Usage is simple,            
-Step1 init your receiver,like                   
+Step1, init your receiver,like                   
 
 ````
 BroadcastReceiver m_receiver = new BroadcastReceiver() {
@@ -14,9 +15,8 @@ BroadcastReceiver m_receiver = new BroadcastReceiver() {
         	//add your code
         }
  }
-
 ````    
-Step2 init your IntentFilter,like             
+Step2, init your IntentFilter,like             
 
 ````
 IntentFilter filter = new IntentFilter();
@@ -26,7 +26,7 @@ filter.addAction(action2);
 filter.addCategory(category1);
 ...
  ```` 
- Step3 register your LocalBroadcastReceiver.       
+ Step3, register your LocalBroadcastReceiver.       
                
  ````
 LocalBroadcastManager.getInstance(context).registerReceiver(receiver,filter);
@@ -56,7 +56,7 @@ BroadcastReceiver m_receiver = new BroadcastReceiver() {
 
 Usage is simple,                 
 
-Step1 Annotate the method you want to act when receive those intent.       
+Step1, Annotate the method you want to act when receive those intent.  "ACTION_TEXT_BLUE" is the action string.      
               
  ````
 @OnReceive("ACTION_TEXT_BLUE")
@@ -69,9 +69,9 @@ public void onTextRed(Context context, Intent intent) {
     Toast.makeText(this, "onTextRed", Toast.LENGTH_LONG).show();
 }
  ```` 
- "ACTION_TEXT_BLUE" is the action string.
+
           
-Step2 bind Annotation when Activity/Fragemnt resume          
+Step2, bind Annotation when Activity/Fragemnt resume.          
                  
  ````
 @Override
@@ -85,7 +85,7 @@ protected void onPause() {
 	LocalBroadcastAnnotations.unbind(this);
 }
  ```` 
-Step3 sent your action!         
+Step3, sent your action!         
               
  ````
 findViewById(R.id.tv_blue).setOnClickListener(new View.OnClickListener() {
@@ -97,12 +97,13 @@ findViewById(R.id.tv_blue).setOnClickListener(new View.OnClickListener() {
 	}
 });
  ```` 
- wola!
+wola!
  
 ### TODO
 * ~~support class inherit~~
+* ~~smart add constant file~~
  
- Enjoy yourself and check the code to know more details~
+Enjoy yourself and check the code to know more details~
 
 
 
