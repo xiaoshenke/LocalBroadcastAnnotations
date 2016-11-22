@@ -29,7 +29,7 @@ import javax.tools.Diagnostic;
 import wuxian.me.localbroadcastannotations.annotation.OnReceive;
 
 /**
- * AbstractProcessor debug article: .
+ * AbstractProcessor debug article: http://www.jianshu.com/p/80a14bc35000
  */
 @SupportedAnnotationTypes(value = "wuxian.me.localbroadcastannotations.annotation.OnReceive")
 //@SupportedSourceVersion(value = SourceVersion.RELEASE_7)
