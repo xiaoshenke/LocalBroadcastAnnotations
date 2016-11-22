@@ -1,7 +1,6 @@
 package wuxian.me.localbroadcastannotations.compiler;
 
 import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.JavaFile;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -14,6 +13,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -55,11 +56,9 @@ public class ConstantFileGuesser {
     public List<ClassName> guess(@NonNull Messager messager, @NonNull PackageElement packageElement) throws ProcessingException {
         if (mConstantClassNames == null) {
             this.messager = messager;
-            //packageElement.toString() --> wuxian.me.localbroadcastdemo
             File cur = new File(new File(".").getAbsolutePath()); // /User/wuxian/Documents/OpenSourceProj/LocalBroadcastAnnotations
             File root = findRootDirectory(cur.getParentFile());
             mProjectRoot = root;
-            //LocalBroadcastAnnotationsProcessor.info(messager,null,String.format("after get project root"));
             mJavaRootDirectory = getJavaRootFile(root, packageElement.toString());
             mConstantClassNames = guessConstantClassNames(mJavaRootDirectory);
         }
@@ -111,7 +110,6 @@ public class ConstantFileGuesser {
         if (rootDir == null) {
             return null;
         }
-        LocalBroadcastAnnotationsProcessor.info(messager, null, String.format("begin get java root file"));
         StringBuilder builder = new StringBuilder("");
 
         BufferedReader reader = null;
@@ -140,13 +138,11 @@ public class ConstantFileGuesser {
         }
 
         String content = builder.toString();
-        LocalBroadcastAnnotationsProcessor.info(messager, null, String.format("setting data %s", content));
         String pattern = "(?<=['\"]:)[-\\w]+(?=['\"])";
         List<String> modules = new ArrayList<>();
         Pattern r = Pattern.compile(pattern);
         Matcher m = r.matcher(content);
         while (m.find()) {
-            LocalBroadcastAnnotationsProcessor.info(messager, null, String.format("find module from setting %s", m.group()));
             modules.add(m.group());
         }
 
@@ -157,15 +153,12 @@ public class ConstantFileGuesser {
         if (mProjectRoot == null || modules == null || modules.size() == 0 || packageName == null || packageName.length() == 0) {
             return null;
         }
-        LocalBroadcastAnnotationsProcessor.info(messager, null, String.format("packagename %s", packageName));
         Pattern p = Pattern.compile("\\.");
         Matcher m = p.matcher(packageName);
         String packagePath = m.replaceAll("/");  //将wuxian.me.demo替换为wuxian/me/demo
-        LocalBroadcastAnnotationsProcessor.info(messager, null, String.format("packagename %s after", packagePath));
 
         for (String module : modules) {
             if (new File((mProjectRoot + "/" + module + "/src/main/java/" + packagePath)).exists()) {
-                LocalBroadcastAnnotationsProcessor.info(messager, null, String.format("we find java root %s", (mProjectRoot + "/" + module + "src/main/java/")));
                 return new File(mProjectRoot + "/" + module + "/src/main/java/");
             }
         }
@@ -173,15 +166,58 @@ public class ConstantFileGuesser {
         return null;
     }
 
-    /**
-     * TODO: to be finshed
-     */
+
     private List<ClassName> guessConstantClassNames(File javaRootDir) {
-        if (javaRootDir == null) {
-            return new ArrayList<>();
+        List<ClassName> classNames = new ArrayList<>();
+        if (javaRootDir == null || !javaRootDir.isDirectory()) {
+            return classNames;
         }
-        return new ArrayList<>();
+
+        Queue<File> queue = new LinkedBlockingQueue<>();
+        queue.add(javaRootDir);
+
+        Pattern p = Pattern.compile("constant.*\\.java", Pattern.CASE_INSENSITIVE);   //类似xxxconstantxxx.java文件
+
+        List<File> validFiles = new ArrayList<>();
+
+        while (!queue.isEmpty()) {
+            File[] files = queue.poll().listFiles();
+            for (int i = 0; i < files.length; i++) {
+                File file = files[i];
+                if (file.isDirectory()) {
+                    queue.add(file);
+                    continue;
+                }
+
+                Matcher m = p.matcher(file.getName());
+                if (m.find()) {
+                    validFiles.add(file);
+                    continue;
+                }
+            }
+        }
+
+        Pattern pattern = Pattern.compile("(?<=/java/).*");
+        for (File file : validFiles) {
+            Matcher m = pattern.matcher(file.getParentFile().getAbsolutePath());
+            if (!m.find()) {
+                continue;
+            }
+            String packagePath = m.group();
+
+            Pattern pattern1 = Pattern.compile("/");
+            Matcher m2 = pattern1.matcher(packagePath);
+            String packageName = m2.replaceAll("\\.");
+
+            Pattern pattern2 = Pattern.compile(".*(?=\\.java)");
+            Matcher m3 = pattern2.matcher(file.getName());
+            if (m3.find()) {
+                String className = m3.group();
+                ClassName cn = ClassName.get(packageName, className);
+                classNames.add(cn);
+            }
+        }
+
+        return classNames;
     }
-
-
 }

@@ -79,7 +79,10 @@ public class AnnotationsFileBuilder {
                     .addStaticImport(ClassName.get(classTypeElement), "*");
 
             for (ClassName className : constantClassNames) {
-                builder.addStaticImport(className, "*");  //add contant files
+                if (elementUtils.getTypeElement(className.packageName() + "." + className.simpleName()) != null) {
+                    builder.addStaticImport(className, "*");//add contant files
+                }
+
             }
 
             builder.build().writeTo(writer);
